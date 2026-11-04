@@ -1,0 +1,15 @@
+.tmdb-key
+cache/
+venv/
+__pycache__/
+*.pyc
+node_modules/
+.DS_Store
+
+# stray build artifacts
+*.profraw
+
+# spike scratch outputs
+spike/cache/
+spike/site/
+spike/wall.json
