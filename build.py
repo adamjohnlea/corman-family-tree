@@ -94,37 +94,42 @@ SOURCE_JOBS = {
 SELF_CHARACTERS = {"self", "himself", "herself", "narrator", "self - narrator"}
 
 # Role seniority for the "before" credit (refinement 3): when a person holds
-# several jobs on their earliest Corman film, we show the most senior one.
-# Higher number wins.
-ROLE_RANK = {
-    "Director": 100,
-    "Executive Producer": 90,
-    "Producer": 88,
-    "Co-Producer": 86,
-    "Associate Producer": 84,
-    "Screenplay": 80,
-    "Writer": 79,
-    "Story": 78,
-    "Director of Photography": 70,
-    "Cinematography": 69,
-    "Editor": 60,
-    "Production Design": 55,
-    "Art Direction": 54,
-    "Visual Effects": 50,
-    "Visual Effects Supervisor": 51,
-    "Sound": 40,
-    "Actor": 30,
-}
+# several credits on their earliest Corman film, we show the single most
+# senior one. Department sets the main order (highest first):
+#   Directing > Writing > Production > Camera > Editing > Art > Sound >
+#   Visual Effects > (any other kept department) > Acting
+# so a real crew role always outranks an Actor (cast) credit on the same film,
+# while someone who ONLY acted still shows as Actor. This is why Martin
+# Scorsese, credited as both Director and Editor on Boxcar Bertha, shows as
+# Director rather than Editor.
 DEPT_RANK = {
-    "Directing": 100,
-    "Writing": 80,
-    "Camera": 70,
-    "Editing": 60,
-    "Art": 55,
-    "Visual Effects": 50,
-    "Production": 45,
-    "Sound": 40,
-    "Acting": 30,
+    "Directing": 9,
+    "Writing": 8,
+    "Production": 7,
+    "Camera": 6,
+    "Editing": 5,
+    "Art": 4,
+    "Sound": 3,
+    "Visual Effects": 2,
+    # any other kept department falls here (1), above Acting
+    "Acting": 0,
+}
+DEPT_RANK_OTHER = 1  # a kept department not named above, still above Acting
+
+# Tie-break WITHIN a department (higher first); 0 for anything unlisted. The
+# producer ladder is the one the design calls out explicitly.
+ROLE_RANK = {
+    "Producer": 4,
+    "Executive Producer": 3,
+    "Co-Producer": 2,
+    "Associate Producer": 1,
+    "Director of Photography": 2,
+    "Cinematography": 2,
+    "Screenplay": 2,
+    "Writer": 2,
+    "Story": 1,
+    "Production Design": 2,
+    "Art Direction": 2,
 }
 
 # Tunables.
@@ -253,20 +258,17 @@ def collect_appearances(films):
     return appear, meta
 
 
-def pick_role(roles, craft):
+def pick_role(roles):
     """Refinement 3: collapse a person's several credits on one film to one.
 
-    Prefer the humble "before": if the person also worked on this film in the
-    craft they ultimately became famous for (Scorsese directed Boxcar Bertha),
-    show a different, less-celebrated role they held on the same film (Editor)
-    when one exists -- that surprising grindhouse role is the whole point of
-    the wall. Fall back to the famous-craft role only when it is all they did.
-    Among the remaining roles, the most senior one wins.
+    Pick the single most senior role, department first (see DEPT_RANK), then
+    by job within that department (see ROLE_RANK). A real crew role always
+    beats an Actor credit on the same film; an Actor-only credit stays Actor.
     """
     def rank(r):
-        return (ROLE_RANK.get(r["job"], 0), DEPT_RANK.get(r["dept"], 0))
-    humble = [r for r in roles if r["dept"] != craft]
-    return max(humble or roles, key=rank)
+        dept = DEPT_RANK.get(r["dept"], DEPT_RANK_OTHER if r["dept"] else 0)
+        return (dept, ROLE_RANK.get(r["job"], 0))
+    return max(roles, key=rank)
 
 
 def person_rows(appear, meta, films):
@@ -307,7 +309,7 @@ def build_row(pid, data, appear, meta, films):
         key=lambda m: films[m]["year"],
     )
     craft = meta[pid]["dept"] or "Crew"
-    role = pick_role(appear[pid][earliest_film], craft)
+    role = pick_role(appear[pid][earliest_film])
     before = {
         "film": films[earliest_film]["title"],
         "year": films[earliest_film]["year"],
