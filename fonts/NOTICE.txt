@@ -1,0 +1,13 @@
+Fonts bundled with The Corman Wall
+==================================
+
+Both families are licensed under the SIL Open Font License, Version 1.1
+(see OFL.txt), which permits bundling and redistribution.
+
+- Anton    -- Copyright The Anton Project Authors
+             https://github.com/googlefonts/AntonFont
+- Archivo  -- Copyright The Archivo Project Authors (Omnibus-Type)
+             https://github.com/Omnibus-Type/Archivo
+
+The woff2 files here were served by Google Fonts. They are used only to
+display the page and are not sold or distributed on their own.

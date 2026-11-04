@@ -6,17 +6,23 @@ alive. **The Corman Wall** is a before/after page: for each person it shows the
 humble grindhouse credit Corman gave them, next to the signature work they went
 on to make.
 
-It is a static web page. One HTML file, no framework, no server, no build step
-for the viewer. The data comes from the [TMDB](https://www.themoviedb.org/) API.
+It is a static site: `index.html` with the data inlined, plus local copies of
+the fonts and the face thumbnails, so it is fully self-contained with no
+third-party requests at view time. No framework, no server, no build step for
+the viewer. The data and images come from the [TMDB](https://www.themoviedb.org/)
+API.
 
 ## What's in here
 
 | File | What it is |
 | --- | --- |
 | `build.py` | Pulls credits from TMDB, applies the inclusion rule, writes `data.json`. Stdlib only. |
-| `generate_index.py` | Inlines `data.json` into the standalone `index.html`. The page markup, CSS and JS live here. |
+| `fetch_assets.py` | Downloads the fonts and face thumbnails into `fonts/` and `faces/` so the page makes no external requests. Stdlib only, idempotent. |
+| `generate_index.py` | Inlines `data.json` and the `@font-face` CSS into the standalone `index.html`. The page markup, CSS and JS live here. |
 | `data.json` | The built dataset (one object per person, plus the film list). |
-| `index.html` | The finished, standalone page. This is what gets deployed. |
+| `index.html` | The finished page. This is what gets deployed. |
+| `fonts/` | Self-hosted Anton + Archivo woff2 (SIL Open Font License) and the `@font-face` CSS. Committed. |
+| `faces/` | Local w92 face thumbnails from TMDB, named by profile hash. Committed. |
 | `design.md` | The locked design spec. |
 | `spike/` | The original throwaway spike the build was ported from. |
 | `.tmdb-key` | Your TMDB v3 API key. **Local only, never committed** (see `.gitignore`). |
@@ -35,13 +41,20 @@ echo 'YOUR_TMDB_V3_KEY' > .tmdb-key
 `.tmdb-key` and `cache/` are both gitignored and must never be committed. Then:
 
 ```bash
-python3 build.py && python3 generate_index.py
+python3 build.py && python3 fetch_assets.py && python3 generate_index.py
 ```
 
 `build.py` caches every API response under `cache/`, so the first run makes the
 network calls and later runs are fast and offline. It prints a row count and a
-sanity sample to stderr. `generate_index.py` reads `data.json` and writes
-`index.html` with the data inlined. Open `index.html` in any browser.
+sanity sample to stderr. `fetch_assets.py` downloads the fonts and face
+thumbnails into `fonts/` and `faces/` (skipping anything already there), so the
+finished page has no external dependencies. `generate_index.py` reads
+`data.json`, inlines it and the font CSS, and writes `index.html`. Open it in
+any browser.
+
+The fonts (Anton and Archivo) are under the SIL Open Font License, so they are
+bundled and committed. The face images come from TMDB; the page carries the
+required TMDB attribution in its footer. Open it in any browser, online or off.
 
 ## Who makes the wall (the inclusion rule)
 

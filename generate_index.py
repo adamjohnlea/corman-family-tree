@@ -2,14 +2,19 @@
 """Generate the standalone index.html for The Corman Wall.
 
 Reads ./data.json and inlines it into a single self-contained HTML file with
-vanilla JS for sort and filter. The only runtime dependency is TMDB's image
-CDN for the faces; there is no framework, no server, and no build step for the
-viewer. Run after build.py:
+vanilla JS for sort and filter. Runtime dependencies are TMDB's image CDN for
+the faces and Google Fonts for the display/text faces; there is no framework,
+no server, and no build step for the viewer. Run after build.py:
 
     python3 build.py && python3 generate_index.py
 
 The page markup, styling and interaction all live in this file -- it is the
 design source of truth. index.html is a generated artifact.
+
+Visual direction: a drive-in / exploitation-cinema "marquee". Loud hero
+(the sheer scale), quiet rows. Warm near-black, aged-paper ink, one hot
+marquee-orange accent. Anton (condensed poster) for the hero and the year
+spine; Archivo for everything you actually read.
 """
 
 import json
@@ -25,166 +30,194 @@ TEMPLATE = r"""<!DOCTYPE html>
 <meta name="description" content="Roger Corman handed hundreds of unknowns their first job in movies. Where each one started with him, and what they went on to make.">
 <title>The Corman Wall</title>
 <style>
+/* self-hosted fonts (Anton + Archivo, SIL Open Font License) */
+__FONTFACE__
 :root{
-  --bg:#0b0d11; --panel:#14181f; --panel-2:#10141b;
-  --ink:#eef1f6; --ink-dim:#cdd4e0; --mut:#8b94a4;
-  --acc:#e8a24b; --line:#20262f; --line-soft:#1a1f28;
-  --serif:Georgia,'Iowan Old Style','Times New Roman',serif;
-  --sans:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,Roboto,sans-serif;
+  --bg:#0c0906; --bg-2:#15100a; --ink:#f3ebda; --ink-dim:#d7ccb5;
+  --mut:#948673; --faint:#6a5f4f; --line:#2a2017; --line-2:#1d160f;
+  --hot:#ff5b24; --hot-dim:#c7461c; --ember:#f0a23a;
+  --poster:'Anton',Impact,'Haettenschweiler','Arial Narrow Bold',sans-serif;
+  --text:'Archivo',-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;
 }
 *{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%}
 body{
   margin:0; background:var(--bg); color:var(--ink);
-  font-family:var(--sans); font-size:16px; line-height:1.5;
+  font-family:var(--text); font-size:16px; line-height:1.5;
   -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;
 }
-a{color:inherit}
 
-/* ---- header ---------------------------------------------------------- */
-.head{
-  position:sticky; top:0; z-index:10;
-  background:rgba(11,13,17,.94); backdrop-filter:blur(10px);
-  border-bottom:1px solid var(--line);
+/* ---- hero / masthead ------------------------------------------------- */
+.hero{max-width:1080px; margin:0 auto; padding:46px 24px 30px}
+.masthead{
+  font-family:var(--poster); font-weight:400; font-size:16px;
+  letter-spacing:.22em; color:var(--mut); text-transform:uppercase; margin:0 0 20px;
 }
-.head-inner{max-width:1040px; margin:0 auto; padding:20px 20px 14px}
-.brand{display:flex; align-items:baseline; gap:14px; flex-wrap:wrap}
-h1{
-  font-family:var(--serif); font-weight:700; font-size:30px;
-  letter-spacing:-.01em; margin:0; line-height:1;
+.claim{
+  font-family:var(--poster); font-weight:400; line-height:.92;
+  font-size:clamp(52px,9.2vw,116px); letter-spacing:.005em; margin:0;
+  text-transform:uppercase; color:var(--ink);
 }
-.count{color:var(--acc); font-weight:700; font-size:15px; letter-spacing:.01em}
-.lede{
-  color:var(--ink-dim); font-size:15px; line-height:1.55;
-  margin:12px 0 0; max-width:62ch;
+.claim .n{color:var(--hot)}
+.claim .run{display:block; color:var(--ink-dim)}
+.bulbs{
+  height:12px; margin:22px 0 20px;
+  background:radial-gradient(circle at center, var(--hot) 0 2.1px, transparent 2.6px);
+  background-size:19px 12px; background-position:left center; background-repeat:repeat-x;
+  opacity:.9;
 }
-.rough{color:var(--mut); font-size:12.5px; margin:8px 0 0; max-width:62ch}
+.lede{color:var(--ink-dim); font-size:17px; line-height:1.55; margin:0; max-width:60ch}
+.rough{color:var(--mut); font-size:13px; margin:10px 0 0; max-width:60ch}
 .rough b{color:var(--ink-dim); font-weight:600}
 
 /* ---- controls -------------------------------------------------------- */
-.controls{display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-top:16px}
-.field{position:relative; display:flex; align-items:center}
-input,select{
-  background:var(--panel-2); border:1px solid var(--line); color:var(--ink);
-  border-radius:9px; padding:9px 12px; font-size:14px; font-family:inherit;
+.controls{
+  position:sticky; top:0; z-index:10; background:rgba(12,9,6,.95);
+  backdrop-filter:blur(9px); border-top:1px solid var(--line);
+  border-bottom:1px solid var(--line);
 }
-input::placeholder{color:var(--mut)}
-input:focus,select:focus{outline:2px solid var(--acc); outline-offset:1px; border-color:transparent}
-#q{min-width:190px}
-select{cursor:pointer; appearance:none; padding-right:30px;
-  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path d='M1 1l4 4 4-4' stroke='%238b94a4' stroke-width='1.5' fill='none' stroke-linecap='round'/></svg>");
-  background-repeat:no-repeat; background-position:right 11px center;
+.controls-inner{max-width:1080px; margin:0 auto; padding:13px 24px}
+.ctrl-top{display:flex; align-items:baseline; gap:18px 22px; flex-wrap:wrap}
+.showing{
+  font-family:var(--poster); font-size:15px; letter-spacing:.08em; color:var(--hot);
+  text-transform:uppercase; white-space:nowrap;
 }
+.spacer{flex:1 1 40px}
+input#q,select{
+  font-family:inherit; font-size:14px; color:var(--ink);
+  background:transparent; border:0; border-bottom:1px solid var(--line);
+  border-radius:0; padding:6px 2px;
+}
+input#q{min-width:150px}
+input#q::placeholder{color:var(--mut)}
+input#q:focus,select:focus{outline:0; border-bottom-color:var(--hot)}
+select{cursor:pointer; appearance:none; padding-right:20px;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='9' height='6' viewBox='0 0 9 6'><path d='M1 1l3.5 3.5L8 1' stroke='%23948673' stroke-width='1.4' fill='none' stroke-linecap='round'/></svg>");
+  background-repeat:no-repeat; background-position:right 2px center;
+}
+select option{background:var(--bg-2); color:var(--ink)}
 .reset{
-  background:none; border:1px solid var(--line); color:var(--mut);
-  border-radius:9px; padding:9px 12px; font-size:13px; cursor:pointer;
+  font-family:inherit; font-size:13px; color:var(--mut); background:none; border:0;
+  cursor:pointer; padding:6px 0; border-bottom:1px solid transparent;
 }
-.reset:hover{color:var(--ink); border-color:var(--mut)}
-
-.filters{margin-top:12px; display:flex; flex-direction:column; gap:9px}
-.filtrow{display:flex; gap:10px; align-items:flex-start; flex-wrap:wrap}
-.flabel{
-  font-size:10.5px; letter-spacing:.09em; text-transform:uppercase;
-  color:var(--mut); min-width:118px; padding-top:6px; flex-shrink:0;
+.reset:hover{color:var(--ink); border-bottom-color:var(--mut)}
+.toggles{display:flex; flex-direction:column; gap:7px; margin-top:11px}
+.trow{display:flex; gap:12px 10px; align-items:baseline; flex-wrap:wrap}
+.tkey{
+  font-size:12px; color:var(--faint); min-width:54px; flex-shrink:0; font-style:italic;
 }
-.chips{display:flex; gap:7px; flex-wrap:wrap; flex:1}
+.chips{display:flex; flex-wrap:wrap; gap:7px 17px; flex:1}
 .chip{
-  font-size:12px; padding:5px 11px; border:1px solid var(--line);
-  border-radius:999px; color:var(--mut); cursor:pointer;
-  display:inline-flex; align-items:center; gap:6px; font-family:inherit;
-  background:none; line-height:1.2; transition:border-color .12s,color .12s;
+  font-family:inherit; font-size:13.5px; color:var(--mut); background:none; border:0;
+  padding:2px 1px; cursor:pointer; border-bottom:2px solid transparent; line-height:1.3;
 }
-.chip:hover{color:var(--ink-dim); border-color:var(--mut)}
-.chip .dot{width:8px; height:8px; border-radius:50%; background:#555; flex-shrink:0}
-.chip[aria-pressed="true"]{color:#0b0d11; font-weight:650; border-color:transparent}
+.chip:hover{color:var(--ink-dim)}
+.chip[aria-pressed="true"]{color:var(--hot); border-bottom-color:var(--hot)}
 
 /* ---- wall ------------------------------------------------------------ */
-.wrap{max-width:1040px; margin:0 auto; padding:4px 20px 96px}
-.empty{color:var(--mut); padding:60px 4px; text-align:center; font-size:15px}
+.wrap{max-width:1080px; margin:0 auto; padding:0 24px 110px}
+.empty{color:var(--mut); padding:70px 4px; text-align:center; font-size:16px}
+.empty button{color:var(--hot); background:none; border:0; cursor:pointer; font:inherit; text-decoration:underline}
 .row{
-  display:grid; grid-template-columns:52px 1fr 26px 1.05fr;
-  gap:16px; align-items:center;
-  padding:15px 12px 15px 16px;
-  border-bottom:1px solid var(--line-soft);
-  border-left:3px solid var(--c,transparent);
+  display:grid; grid-template-columns:62px 54px minmax(0,1fr) minmax(0,1.12fr);
+  gap:20px; align-items:start; padding:19px 4px; border-bottom:1px solid var(--line-2);
 }
-.row:hover{background:var(--panel)}
+.row:hover{background:var(--bg-2)}
+.year{
+  font-family:var(--poster); font-size:28px; line-height:.9; color:var(--hot);
+  padding-top:2px; letter-spacing:.01em;
+}
+.year.dim{color:var(--faint)}  /* a year repeated from the row above recedes */
 .face{
-  width:52px; height:70px; border-radius:8px; object-fit:cover;
-  background:var(--line); display:block;
+  width:54px; height:72px; border-radius:3px; object-fit:cover; background:var(--line);
+  display:block; filter:grayscale(1) contrast(1.04) brightness(.94) sepia(.18);
+  transition:filter .3s ease;
 }
+.row:hover .face{filter:none}
 .noface{
-  width:52px; height:70px; border-radius:8px; background:var(--line);
-  display:flex; align-items:center; justify-content:center;
-  color:#5b667e; font-size:20px; font-weight:700; font-family:var(--serif);
+  width:54px; height:72px; border-radius:3px; background:var(--line); display:flex;
+  align-items:center; justify-content:center; color:var(--faint);
+  font-family:var(--poster); font-size:26px;
 }
-.name{font-weight:650; font-size:16.5px; letter-spacing:-.005em}
-.credit{color:var(--mut); font-size:13.5px; margin-top:3px; line-height:1.45}
-.credit .film{color:var(--ink-dim); font-family:var(--serif); font-style:italic; font-size:14.5px}
-.credit .role{color:var(--ink); font-weight:600}
-.became{
-  margin-top:7px; font-size:10.5px; letter-spacing:.07em; text-transform:uppercase;
-  color:var(--mut);
-}
-.became b{font-weight:700}
-.arrow{color:var(--acc); font-size:19px; text-align:center; line-height:1}
-.after .after-label{
-  font-size:10.5px; letter-spacing:.09em; text-transform:uppercase; color:var(--mut);
-}
-.after .titles{font-size:14.5px; font-weight:600; margin-top:3px; line-height:1.4}
-.after .titles .t{font-family:var(--serif); font-style:italic; font-weight:600}
-.after .titles .yr{color:var(--mut); font-weight:400; font-style:normal; font-family:var(--sans); font-size:12.5px}
-.after .titles .sep{color:var(--line); font-weight:400; margin:0 5px}
+.name{font-weight:600; font-size:17px; letter-spacing:-.003em; line-height:1.2}
+.credit{color:var(--mut); font-size:14px; margin-top:4px; line-height:1.45}
+.credit .film{color:var(--ink-dim); font-style:italic; font-weight:500}
+.credit .yr{color:var(--faint)}
+.credit .role{color:var(--ink-dim)}
+.after{border-left:1px solid var(--line); padding-left:20px; min-width:0}
+.craft{font-size:13px; color:var(--hot); margin-bottom:5px; line-height:1.3}
+.titles{font-size:15px; line-height:1.5; color:var(--ink)}
+.titles .t{font-style:italic; font-weight:500}
+.titles .yr{color:var(--faint); font-style:normal; font-size:12.5px}
+.titles .sep{color:var(--line); margin:0 7px}
 
 /* ---- mobile ---------------------------------------------------------- */
-@media(max-width:640px){
+@media(max-width:680px){
   body{font-size:15px}
-  .head-inner{padding:16px 16px 12px}
-  h1{font-size:25px}
-  .wrap{padding:4px 16px 72px}
-  #q{min-width:0; flex:1}
-  .field{flex:1 1 auto}
-  select{flex:1 1 auto}
-  .flabel{min-width:0; width:100%; padding-top:0}
+  .hero{padding:34px 18px 22px}
+  .claim{font-size:clamp(44px,13vw,70px)}
+  .controls-inner{padding:12px 18px}
+  .wrap{padding:0 18px 80px}
+  input#q{flex:1 1 130px; min-width:0}
   .row{
-    grid-template-columns:52px 1fr; gap:12px 14px;
-    padding:16px 4px; align-items:start;
+    grid-template-columns:44px 1fr; gap:4px 14px; padding:20px 2px; align-items:start;
   }
-  .arrow{display:none}
-  .after{grid-column:1 / -1; padding-top:12px; margin-top:2px; border-top:1px dashed var(--line)}
-  .after .after-label{color:var(--acc)}
+  .year{grid-row:1 / span 2; font-size:24px}
+  .face{grid-column:2; width:50px; height:66px; margin-bottom:4px}
+  .nmwrap{grid-column:2}
+  .after{
+    grid-column:1 / -1; border-left:0; padding-left:0; margin-top:12px;
+    padding-top:12px; border-top:1px solid var(--line-2);
+  }
 }
+/* ---- footer ---------------------------------------------------------- */
+.foot{
+  max-width:1080px; margin:0 auto; padding:26px 24px 60px;
+  border-top:1px solid var(--line); color:var(--mut); font-size:13px; line-height:1.6;
+}
+.foot a{color:var(--ink-dim); text-decoration:underline; text-underline-offset:2px}
+.foot a:hover{color:var(--hot)}
+@media(max-width:680px){.foot{padding:22px 18px 48px}}
 @media(prefers-reduced-motion:reduce){*{transition:none !important}}
 </style>
 </head>
 <body>
-<header class="head">
-  <div class="head-inner">
-    <div class="brand">
-      <h1>The Corman Wall</h1>
-      <span class="count" id="count"></span>
-    </div>
-    <p class="lede">Roger Corman handed hundreds of unknowns their first real job in movies. Below is where each one started with him, and what they went on to make.</p>
-    <p class="rough">Credits come from TMDB, so the data runs <b>rough where a career is thin</b>. The early credit and the later work are what it gets right.</p>
-    <div class="controls">
-      <div class="field"><input id="q" type="search" placeholder="Search a name..." aria-label="Search by name"></div>
+<header class="hero">
+  <p class="masthead">The Corman Wall</p>
+  <h1 class="claim">One man.<br><span class="n" id="bigN">600</span> careers.<br><span class="run"><span id="runFrom">1954</span> &mdash; today.</span></h1>
+  <div class="bulbs" aria-hidden="true"></div>
+  <p class="lede">Roger Corman put hundreds of unknowns to work on cheap, fast movies, then watched them become some of the most important filmmakers and actors alive. Here is where each one started with him, and what they made next.</p>
+  <p class="rough">Credits come from TMDB, so the record runs <b>rough where a career is thin</b>. The early job and the later work are what it gets right.</p>
+</header>
+
+<div class="controls">
+  <div class="controls-inner">
+    <div class="ctrl-top">
+      <span class="showing" id="showing"></span>
+      <span class="spacer"></span>
+      <input id="q" type="search" placeholder="Search a name" aria-label="Search by name">
       <select id="sort" aria-label="Sort order">
-        <option value="caughtold">Year caught: earliest first</option>
-        <option value="caughtnew">Year caught: latest first</option>
+        <option value="caughtold">Earliest first</option>
+        <option value="caughtnew">Latest first</option>
         <option value="after">Most work after Corman</option>
         <option value="shuffle">Shuffle</option>
         <option value="name">Name A to Z</option>
       </select>
-      <select id="film" aria-label="Filter by first Corman film"><option value="">First Corman film: any</option>__FILMS__</select>
+      <select id="film" aria-label="Filter by first Corman film"><option value="">Any Corman film</option>__FILMS__</select>
       <button class="reset" id="reset" type="button">Reset</button>
     </div>
-    <div class="filters">
-      <div class="filtrow"><span class="flabel" id="lbl-job">Their Corman job</span><div class="chips" id="cjob" role="group" aria-labelledby="lbl-job"></div></div>
-      <div class="filtrow"><span class="flabel" id="lbl-dec">Decade caught</span><div class="chips" id="cdec" role="group" aria-labelledby="lbl-dec"></div></div>
+    <div class="toggles">
+      <div class="trow"><span class="tkey">job</span><div class="chips" id="cjob" role="group" aria-label="Filter by their Corman job"></div></div>
+      <div class="trow"><span class="tkey">decade</span><div class="chips" id="cdec" role="group" aria-label="Filter by decade caught"></div></div>
     </div>
   </div>
-</header>
+</div>
+
 <main class="wrap" id="wall" aria-live="polite"></main>
+
+<footer class="foot">
+  <p>Faces and credits come from <a href="https://www.themoviedb.org" target="_blank" rel="noopener">TMDB</a>. This product uses the TMDB API but is not endorsed or certified by TMDB.</p>
+</footer>
 
 <script id="wall-data" type="application/json">__DATA__</script>
 <script>
@@ -192,15 +225,17 @@ select{cursor:pointer; appearance:none; padding-right:30px;
 const DATA = JSON.parse(document.getElementById("wall-data").textContent);
 const ROWS = DATA.rows;
 
-// Craft colors: the Corman-job axis (left border) and "became known for".
-const COL = {
-  Acting:"#e8625f", Directing:"#f0a93a", Writing:"#63d2bf", Camera:"#5f93e0",
-  Editing:"#b58ce6", Production:"#86c56a", Sound:"#dd8cc4",
-  "Visual Effects":"#7fd05b", Art:"#e0bd5f", "Costume & Make-Up":"#d98f7a",
-};
-const col = c => COL[c] || "#8b94a4";
 const esc = s => String(s).replace(/[&<>"]/g, m => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[m]));
 const el = id => document.getElementById(id);
+
+// Craft as a plain lowercase noun ("became a director") -- no color coding.
+const CRAFT_NOUN = {
+  Acting:"an actor", Directing:"a director", Writing:"a writer",
+  Camera:"a cinematographer", Editing:"an editor", Production:"a producer",
+  Sound:"a sound mixer", Art:"an art director",
+  "Visual Effects":"a visual-effects artist", "Costume & Make-Up":"a costume and make-up artist",
+};
+const craftNoun = c => CRAFT_NOUN[c] || ("known for " + String(c).toLowerCase());
 
 // Filter options ordered by frequency (most common first).
 const freq = key => {
@@ -213,24 +248,22 @@ const decade = r => Math.floor(r.caught / 10) * 10;
 const decades = [...new Set(ROWS.map(decade))].sort((a, b) => a - b);
 
 const fJob = new Set(), fDec = new Set();
+const toggle = (set, v) => set.has(v) ? set.delete(v) : set.add(v);
 
-function chip(label, color, pressed, onClick){
+function chip(label, pressed, onClick){
   const b = document.createElement("button");
   b.type = "button"; b.className = "chip"; b.setAttribute("aria-pressed", pressed);
-  b.onclick = onClick;
-  b.innerHTML = (color ? `<span class="dot" style="background:${color}"></span>` : "") + esc(label);
-  if (pressed){ b.style.background = color || "#3a4454"; b.style.borderColor = "transparent"; }
+  b.textContent = label; b.onclick = onClick;
   return b;
 }
 function renderChips(){
   const j = el("cjob"); j.innerHTML = "";
   jobs.forEach(job => j.appendChild(
-    chip(job, col(job), fJob.has(job), () => { toggle(fJob, job); renderChips(); draw(); })));
+    chip(job, fJob.has(job), () => { toggle(fJob, job); renderChips(); draw(); })));
   const d = el("cdec"); d.innerHTML = "";
   decades.forEach(dec => d.appendChild(
-    chip(dec + "s", null, fDec.has(dec), () => { toggle(fDec, dec); renderChips(); draw(); })));
+    chip(dec + "s", fDec.has(dec), () => { toggle(fDec, dec); renderChips(); draw(); })));
 }
-const toggle = (set, v) => set.has(v) ? set.delete(v) : set.add(v);
 
 const SORTS = {
   caughtold:(a, b) => a.caught - b.caught || a.name.localeCompare(b.name),
@@ -240,24 +273,22 @@ const SORTS = {
 };
 function shuffle(a){ for (let i = a.length - 1; i > 0; i--){ const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } }
 
-function rowHTML(r){
-  const c = col(r.cormanDept);
+function rowHTML(r, dimYear){
   const face = r.profile
-    ? `<img class="face" loading="lazy" src="https://image.tmdb.org/t/p/w92${r.profile}" alt="${esc(r.name)}">`
-    : `<div class="noface" aria-hidden="true">${esc((r.name[0] || "?"))}</div>`;
+    ? `<img class="face" loading="lazy" src="faces${r.profile}" alt="${esc(r.name)}">`
+    : `<div class="noface" aria-hidden="true">${esc(r.name[0] || "?")}</div>`;
   const titles = r.became.slice(0, 3).map(b => {
     const yr = b.tv ? ` <span class="yr">(TV)</span>` : (b.y ? ` <span class="yr">(${b.y})</span>` : "");
     return `<span class="t">${esc(b.t)}</span>${yr}`;
   }).join(`<span class="sep">/</span>`);
-  return `${face}
-    <div class="before">
+  return `<div class="year${dimYear ? " dim" : ""}">${r.caught}</div>
+    ${face}
+    <div class="nmwrap">
       <div class="name">${esc(r.name)}</div>
-      <div class="credit"><span class="film">${esc(r.before.film)}</span> &middot; ${r.before.year} &middot; <span class="role">${esc(r.before.role)}</span></div>
-      <div class="became">became known for <b style="color:${col(r.craft)}">${esc(r.craft)}</b></div>
+      <div class="credit"><span class="film">${esc(r.before.film)}</span> <span class="yr">(${r.before.year})</span>, <span class="role">${esc(String(r.before.role).toLowerCase())}</span></div>
     </div>
-    <div class="arrow" aria-hidden="true">&rarr;</div>
     <div class="after">
-      <div class="after-label">went on to</div>
+      <div class="craft">became ${esc(craftNoun(r.craft))}</div>
       <div class="titles">${titles}</div>
     </div>`;
 }
@@ -276,15 +307,22 @@ function draw(){
   if (sort === "shuffle") shuffle(rs);
   else rs.sort(SORTS[sort]);
 
-  el("count").textContent = rs.length + (rs.length === 1 ? " career" : " careers");
+  const full = rs.length === ROWS.length;
+  el("showing").textContent = full
+    ? rs.length + " careers"
+    : rs.length + " of " + ROWS.length;
   const wall = el("wall");
-  if (!rs.length){ wall.innerHTML = `<p class="empty">No one matches those filters. <button class="reset" onclick="document.getElementById('reset').click()">Reset</button></p>`; return; }
+  if (!rs.length){
+    wall.innerHTML = `<p class="empty">No one matches that. <button onclick="document.getElementById('reset').click()">Clear the filters</button></p>`;
+    return;
+  }
   const frag = document.createDocumentFragment();
+  let lastYear = null;
   rs.forEach(r => {
     const a = document.createElement("article");
     a.className = "row";
-    a.style.setProperty("--c", col(r.cormanDept));
-    a.innerHTML = rowHTML(r);
+    a.innerHTML = rowHTML(r, r.caught === lastYear);
+    lastYear = r.caught;
     frag.appendChild(a);
   });
   wall.innerHTML = "";
@@ -298,6 +336,11 @@ el("reset").onclick = () => {
   el("q").value = ""; el("sort").value = "caughtold"; el("film").value = "";
   fJob.clear(); fDec.clear(); renderChips(); draw();
 };
+
+// Hero scale, from the data itself.
+el("bigN").textContent = ROWS.length;
+el("runFrom").textContent = Math.min(...ROWS.map(r => r.caught));
+
 renderChips();
 draw();
 </script>
@@ -316,7 +359,14 @@ def main():
     # Inline the data; escape "</" so no title can close the <script> tag early.
     blob = json.dumps(data, ensure_ascii=False).replace("</", "<\\/")
 
-    html = TEMPLATE.replace("__FILMS__", films_opts).replace("__DATA__", blob)
+    # Inline the self-hosted @font-face rules (no third-party font request).
+    with open(os.path.join(HERE, "fonts", "fonts.css"), encoding="utf-8") as fh:
+        fontface = fh.read().strip()
+
+    html = (TEMPLATE
+            .replace("__FONTFACE__", fontface)
+            .replace("__FILMS__", films_opts)
+            .replace("__DATA__", blob))
     with open(os.path.join(HERE, "index.html"), "w", encoding="utf-8") as fh:
         fh.write(html)
     print(f"wrote index.html ({len(html):,} bytes, {len(data['rows'])} rows)")
